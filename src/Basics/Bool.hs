@@ -42,6 +42,7 @@ import Prelude hiding (shows)
 import GHC.Exts (RuntimeRep(IntRep))
 import GHC.Exts (Int#,State#,MutableByteArray#,ByteArray#)
 import GHC.Exts (sizeofByteArray#,(>=#),(<#))
+import GHC.Exts (getSizeofMutableByteArray#)
 import GHC.Int (Int(I#))
 
 import qualified Prelude
@@ -87,13 +88,22 @@ index# xs i = case i <# 0# of
 
 read# :: MutableByteArray# s -> Int# -> State# s -> (# State# s, T# #)
 {-# inline read# #-}
-read# arr i st =
-  let !(# st', v #) = Exts.readInt8Array# arr i st
-   in (# st', Exts.int8ToInt# v #)
+read# arr i st = case i <# 0# of
+  1# -> error ("Basics.Bool.read#: negative index " ++ show (I# i))
+  _ -> case getSizeofMutableByteArray# arr st of
+    (# st', sz #) -> case i >=# sz of
+      1# -> error ("Basics.Bool.read#: index " ++ show (I# i) ++ " >= length " ++ show (I# sz))
+      _ -> let !(# st'', v #) = Exts.readInt8Array# arr i st'
+            in (# st'', Exts.int8ToInt# v #)
 
 write# :: MutableByteArray# s -> Int# -> T# -> State# s -> State# s
 {-# inline write# #-}
-write# arr i v st = Exts.writeInt8Array# arr i (Exts.intToInt8# v) st
+write# arr i v st = case i <# 0# of
+  1# -> error ("Basics.Bool.write#: negative index " ++ show (I# i))
+  _ -> case getSizeofMutableByteArray# arr st of
+    (# st', sz #) -> case i >=# sz of
+      1# -> error ("Basics.Bool.index#: index " ++ show (I# i) ++ " >= length " ++ show (I# sz))
+      _ -> Exts.writeInt8Array# arr i (Exts.intToInt8# v) st'
 
 set# :: MutableByteArray# s -> Int# -> Int# -> T# -> State# s -> State# s
 {-# inline set# #-}
