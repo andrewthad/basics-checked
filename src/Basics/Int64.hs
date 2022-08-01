@@ -190,9 +190,13 @@ index# :: ByteArray# -> Int# -> T#
 {-# noinline index# #-}
 index# xs i = case i <# 0# of
   1# -> error ("Basics.Int64.index#: negative index " ++ show (I# i))
-  _ -> case i >=# sizeofByteArray# xs of
-    1# -> error ("Basics.Int64.index#: index " ++ show (I# i) ++ " >= length " ++ show (I# (sizeofByteArray# xs)))
-    _ -> indexIntArray# xs i
+  _ -> case remInt# sz 8# of
+    0# -> case i >=# quotInt# sz 8# of
+      1# -> error ("Basics.Int64.index#: index " ++ show (I# i) ++ " >= length " ++ show (I# (quotInt# sz 8#)))
+      _ -> indexIntArray# xs i
+    _ -> error "Basics.Int64.index#: array size did not divide 8 evenly"
+  where
+  sz = sizeofByteArray# xs
 
 read# :: MutableByteArray# s -> Int# -> State# s -> (# State# s, T# #)
 {-# inline read# #-}
