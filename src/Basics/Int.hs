@@ -59,6 +59,11 @@ import Data.Primitive (MutableByteArray(..))
 import GHC.Exts ((+#),(*#),(-#))
 import GHC.Exts (Int(I#),RuntimeRep(IntRep))
 import GHC.Exts (State#,MutableByteArray#,Int#,ByteArray#)
+import GHC.Exts (writeIntArray#,readIntArray#,indexIntArray#)
+import GHC.Exts (quotInt#,remInt#)
+import GHC.Exts (getSizeofMutableByteArray#)
+import GHC.Exts (sizeofByteArray#)
+import GHC.Exts ((<#),(>=#))
 import GHC.ST (ST(ST))
 
 import qualified Prelude
@@ -170,16 +175,38 @@ neq :: T -> T -> Bool
 neq = (/=)
 
 index# :: ByteArray# -> Int# -> T#
-{-# inline index# #-}
-index# = Exts.indexIntArray#
+{-# noinline index# #-}
+index# xs i = case i <# 0# of
+  1# -> error ("Basics.Int.index#: negative index " ++ show (I# i))
+  _ -> case remInt# sz 8# of
+    0# -> case i >=# quotInt# sz 8# of
+      1# -> error ("Basics.Int.index#: index " ++ show (I# i) ++ " >= length " ++ show (I# (quotInt# sz 8#)))
+      _ -> indexIntArray# xs i
+    _ -> error "Basics.Int.index#: array size did not divide 8 evenly"
+  where
+  sz = sizeofByteArray# xs
 
 read# :: MutableByteArray# s -> Int# -> State# s -> (# State# s, T# #)
 {-# inline read# #-}
-read# = Exts.readIntArray#
+read# arr i st = case i <# 0# of
+  1# -> error ("Basics.Int.read#: negative index " ++ show (I# i))
+  _ -> case getSizeofMutableByteArray# arr st of
+    (# st', sz #) -> case remInt# sz 8# of
+      0# -> case i >=# quotInt# sz 8# of
+        1# -> error ("Basics.Int.read#: index " ++ show (I# i) ++ " >= length " ++ show (I# (quotInt# sz 8#)))
+        _ -> readIntArray# arr i st'
+      _ -> error "Basics.Int.read#: array size did not divide 8 evenly"
 
 write# :: MutableByteArray# s -> Int# -> T# -> State# s -> State# s
 {-# inline write# #-}
-write# = Exts.writeIntArray#
+write# arr i e st = case i <# 0# of
+  1# -> error ("Basics.Int.write#: negative index " ++ show (I# i))
+  _ -> case getSizeofMutableByteArray# arr st of
+    (# st', sz #) -> case remInt# sz 8# of
+      0# -> case i >=# quotInt# sz 8# of
+        1# -> error ("Basics.Int.write#: index " ++ show (I# i) ++ " >= length " ++ show (I# (quotInt# sz 8#)))
+        _ -> writeIntArray# arr i e st'
+      _ -> error "Basics.Int.write#: array size did not divide 8 evenly"
 
 set# :: MutableByteArray# s -> Int# -> Int# -> T# -> State# s -> State# s
 {-# inline set# #-}

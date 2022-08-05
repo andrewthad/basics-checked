@@ -200,11 +200,25 @@ index# xs i = case i <# 0# of
 
 read# :: MutableByteArray# s -> Int# -> State# s -> (# State# s, T# #)
 {-# inline read# #-}
-read# = readIntArray#
+read# arr i st = case i <# 0# of
+  1# -> error ("Basics.Int64.read#: negative index " ++ show (I# i))
+  _ -> case getSizeofMutableByteArray# arr st of
+    (# st', sz #) -> case remInt# sz 8# of
+      0# -> case i >=# quotInt# sz 8# of
+        1# -> error ("Basics.Int64.read#: index " ++ show (I# i) ++ " >= length " ++ show (I# (quotInt# sz 8#)))
+        _ -> readIntArray# arr i st'
+      _ -> error "Basics.Int64.read#: array size did not divide 8 evenly"
 
 write# :: MutableByteArray# s -> Int# -> T# -> State# s -> State# s
 {-# inline write# #-}
-write# = writeIntArray#
+write# arr i e st = case i <# 0# of
+  1# -> error ("Basics.Int64.write#: negative index " ++ show (I# i))
+  _ -> case getSizeofMutableByteArray# arr st of
+    (# st', sz #) -> case remInt# sz 8# of
+      0# -> case i >=# quotInt# sz 8# of
+        1# -> error ("Basics.Int64.write#: index " ++ show (I# i) ++ " >= length " ++ show (I# (quotInt# sz 8#)))
+        _ -> writeIntArray# arr i e st'
+      _ -> error "Basics.Int64.write#: array size did not divide 8 evenly"
 
 set# :: MutableByteArray# s -> Int# -> Int# -> T# -> State# s -> State# s
 {-# inline set# #-}

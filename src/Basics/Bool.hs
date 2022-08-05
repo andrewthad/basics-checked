@@ -102,7 +102,7 @@ write# arr i v st = case i <# 0# of
   1# -> error ("Basics.Bool.write#: negative index " ++ show (I# i))
   _ -> case getSizeofMutableByteArray# arr st of
     (# st', sz #) -> case i >=# sz of
-      1# -> error ("Basics.Bool.index#: index " ++ show (I# i) ++ " >= length " ++ show (I# sz))
+      1# -> error ("Basics.Bool.write#: index " ++ show (I# i) ++ " >= length " ++ show (I# sz))
       _ -> Exts.writeInt8Array# arr i (Exts.intToInt8# v) st'
 
 set# :: MutableByteArray# s -> Int# -> Int# -> T# -> State# s -> State# s
